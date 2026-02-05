@@ -1,17 +1,11 @@
-<?php
-ob_start();
-error_reporting(0);
-ini_set('display_errors', 0);
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json; charset=UTF-8"); // Ensure UTF-8
-
+// Include the centralized DB and Header file
 include 'db.php';
 
-// Check if inputs exist
-$phone = isset($_POST['phone']) ? $_POST['phone'] : '';
-$password = isset($_POST['password']) ? $_POST['password'] : '';
+// Start output buffer to capture any accidental output
+ob_start();
+
+$phone = $_POST['phone'] ?? '';
+$password = $_POST['password'] ?? '';
 
 if(empty($phone) || empty($password)){
     echo json_encode(["success" => false, "error" => "Empty fields"]);
@@ -23,7 +17,8 @@ $stmt->bind_param("ss", $phone, $password);
 $stmt->execute();
 $result = $stmt->get_result();
 
-ob_end_clean(); // Clean buffer
+// Clean any buffer before sending JSON
+ob_clean();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();

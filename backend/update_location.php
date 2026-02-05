@@ -1,5 +1,6 @@
 <?php
-header("Content-Type: application/json");
+// Headers are handled in db.php
+
 include 'db.php';
 
 $driver_id = $_POST['driver_id'] ?? 0;

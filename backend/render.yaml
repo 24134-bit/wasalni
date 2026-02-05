@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: wasalni-backend
+    runtime: docker
+    plan: free
+    region: frankfurt # Or your preferred region
+    envVars:
+      - key: DB_HOST
+        placeholder: "DB Hostname (e.g. sql113.infinityfree.com or your new DB)"
+      - key: DB_USER
+        placeholder: "DB Username"
+      - key: DB_PASS
+        placeholder: "DB Password"
+      - key: DB_NAME
+        placeholder: "DB Name"
+      - key: PORT
+        value: 80
