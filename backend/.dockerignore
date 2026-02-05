@@ -1,0 +1,9 @@
+.git
+.dockerignore
+Dockerfile
+docker-compose.yml
+node_modules
+db_data
+tests
+.env
+README_DEPLOY.md
