@@ -28,6 +28,9 @@ COPY . /var/www/html/
 # Set permissions
 RUN mkdir -p uploads/captains && \
     chmod -R 755 /var/www/html && \
-    chown -R www-data:www-data /var/www/html
+    chown -R www-data:www-data /var/www/html && \
+    chmod +x /var/www/html/start.sh
 
 EXPOSE 80
+
+CMD ["/var/www/html/start.sh"]
