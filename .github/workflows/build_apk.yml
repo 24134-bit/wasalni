@@ -31,7 +31,19 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v1.0.0"
+          name: "Latest Wasalni APK"
+          body: "هذا هو ملف APK الأخير الذي يحتوي على كافة التعديلات الجديدة."
+          files: build/app/outputs/flutter-apk/app-release.apk
+          generate_release_notes: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
