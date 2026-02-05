@@ -12,8 +12,12 @@ COPY . /var/www/html/
 # Ensure permissions for uploads directory
 RUN mkdir -p uploads/captains && chmod -R 755 uploads && chown -R www-data:www-data uploads
 
-# Enable Apache mod_rewrite (if needed for .htaccess)
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Expose port 80 (Render automatically detects this)
+# Configure Apache to process PHP files
+RUN echo "DirectoryIndex index.php index.html" >> /etc/apache2/apache2.conf && \
+    echo "AddType application/x-httpd-php .php" >> /etc/apache2/apache2.conf
+
+# Expose port 80
 EXPOSE 80
