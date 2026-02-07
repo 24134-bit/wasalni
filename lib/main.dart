@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
+import 'login.dart';
 
 
 void main() {
@@ -42,7 +43,10 @@ class WasalniApp extends StatelessWidget {
         ),
 
       ),
-      home: const SplashScreen(),
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginPage(),
+      },
     );
   }
 }

@@ -25,7 +25,12 @@ try {
 
     // 2. Refund Commission if the ride was accepted
     if ($assigned_driver && ($status == 'accepted' || $status == 'arrived' || $status == 'on_trip')) {
-        $commission = $price * 0.10;
+        // Fetch dynamic commission
+        $setQ = $conn->query("SELECT commission_percent FROM settings LIMIT 1");
+        $settings = $setQ->fetch_assoc();
+        $commRate = $settings['commission_percent'] ?? 10;
+        $commission = $price * ($commRate / 100);
+
         $refundObj = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
         $refundObj->bind_param("di", $commission, $assigned_driver);
         $refundObj->execute();

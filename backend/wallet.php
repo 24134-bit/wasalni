@@ -21,7 +21,12 @@ if($res->num_rows > 0) {
 }
 $balance = $user_info['balance'];
 
-// 2. Transactons
+// 2. Fetch Settings for display
+$setQ = $conn->query("SELECT commission_percent FROM settings LIMIT 1");
+$settings = $setQ->fetch_assoc();
+$commRate = $settings['commission_percent'] ?? 10;
+
+// 3. Transactions
 $transactions = [];
 
 // Deposits
@@ -45,10 +50,13 @@ $r_stmt->bind_param("i", $driver_id);
 $r_stmt->execute();
 $rides = $r_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 foreach($rides as $r) {
-    $commission = $r['total_price'] * 0.10; 
+    // Note: We use the rate from settings for display, 
+    // but ideally the actual deduction amount should be stored in a transactions table.
+    // For now, we calculate based on current rate or assume it was correct at the time.
+    $commission = $r['total_price'] * ($commRate / 100); 
     $transactions[] = [
         "type" => "deduction",
-        "description" => "Ride #" . $r['id'] . " Commission (10%)",
+        "description" => "Ride #" . $r['id'] . " Commission ($commRate%)",
         "amount" => -$commission,
         "status" => "completed",
         "date" => $r['created_at']

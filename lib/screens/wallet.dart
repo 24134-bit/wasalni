@@ -26,7 +26,7 @@ class _WalletPageState extends State<WalletPage> {
 
   void _fetchWallet() async {
     try {
-      var res = await http.get(Uri.parse("${Config.baseUrl}/wallet.php?driver_id=${widget.driverId}"));
+      var res = await http.get(Uri.parse("${Config.baseUrl}/wallet.php?driver_id=${widget.driverId}"), headers: Config.headers);
       var data = json.decode(res.body);
 
       if(mounted && data['success']) {

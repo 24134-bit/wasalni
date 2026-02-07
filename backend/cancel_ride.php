@@ -24,13 +24,20 @@ try {
 
     $price = $ride['total_price'];
     $assigned_driver = $ride['driver_id'];
-    $commission = $price * 0.10;
+    $status = $ride['status']; // Get status for the condition
 
-    // 2. Refund Commission to Driver
-    $refundObj = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-    $refundObj->bind_param("di", $commission, $assigned_driver);
-    $refundObj->execute();
+    // 2. Refund Commission if the ride was accepted
+    if ($assigned_driver && ($status == 'accepted' || $status == 'arrived' || $status == 'on_trip')) {
+        // Fetch dynamic commission
+        $setQ = $conn->query("SELECT commission_percent FROM settings LIMIT 1");
+        $settings = $setQ->fetch_assoc();
+        $commRate = $settings['commission_percent'] ?? 10;
+        $commission = $price * ($commRate / 100);
 
+        $refundObj = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+        $refundObj->bind_param("di", $commission, $assigned_driver);
+        $refundObj->execute();
+    }
     // 3. Mark Ride as Cancelled (or reset to pending depending on business logic)
     // User requested: "degeler" (unfreeze). If cancelled, we assume it's dead.
     $updateRide = $conn->prepare("UPDATE rides SET status = 'pending', driver_id = NULL WHERE id = ?");

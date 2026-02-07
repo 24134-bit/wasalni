@@ -3,15 +3,15 @@ services:
     name: wasalni-backend
     runtime: docker
     plan: free
-    region: frankfurt # Or your preferred region
+    region: frankfurt
     envVars:
       - key: DB_HOST
-        placeholder: "DB Hostname (e.g. sql113.infinityfree.com or your new DB)"
+        sync: false
       - key: DB_USER
-        placeholder: "DB Username"
+        sync: false
       - key: DB_PASS
-        placeholder: "DB Password"
+        sync: false
       - key: DB_NAME
-        placeholder: "DB Name"
+        sync: false
       - key: PORT
         value: 80

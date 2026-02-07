@@ -26,5 +26,11 @@ if ($action == 'approve') {
     $conn->query("UPDATE users SET balance = balance + $amount WHERE id = $driver_id");
 }
 
+// Notify the driver
+include_once 'send_notification_func.php';
+$notifTitle = ($action == 'approve') ? "Depot Approuve" : "Depot Rejete";
+$notifBody = ($action == 'approve') ? "Votre recharge de $amount MRU a ete approuvee." : "Votre recharge a ete rejetee. Veuillez contacter le support.";
+send_notification($conn, 'driver', $driver_id, $notifTitle, $notifBody);
+
 echo json_encode(["success" => true]);
 ?>

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:geolocator/geolocator.dart'; // Import Geolocator
 import '../config.dart';
 import '../lang.dart';
 
@@ -76,11 +78,32 @@ class _OnRidePageState extends State<OnRidePage> {
   void _finishRide() async {
     setState(() => isLoading = true);
     try {
-      var res = await http.post(
-        Uri.parse("${Config.baseUrl}/finish_ride.php"),
-        body: {"ride_id": widget.rideData['id'].toString()}
-      );
-      var data = json.decode(res.body);
+      var response;
+      try {
+         Position p = await Geolocator.getCurrentPosition();
+         response = await http.post(
+            Uri.parse("${Config.baseUrl}/finish_ride.php"),
+            headers: Config.headers,
+            body: {
+              "ride_id": widget.rideData['id'].toString(),
+              "d_lat": p.latitude.toString(),
+              "d_lng": p.longitude.toString()
+            }
+         );
+      } catch(e) {
+         // Fallback if location fails
+         response = await http.post(
+            Uri.parse("${Config.baseUrl}/finish_ride.php"),
+            headers: Config.headers,
+            body: {
+              "ride_id": widget.rideData['id'].toString(),
+              "d_lat": "0", 
+              "d_lng": "0" 
+            }
+          );
+      }
+
+      var data = json.decode(response.body);
 
       if(!mounted) return;
 
@@ -102,7 +125,20 @@ class _OnRidePageState extends State<OnRidePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(Lang.get('on_trip'))),
+      appBar: AppBar(
+        title: Text(Lang.get('on_trip')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if(!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+          )
+        ],
+      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -129,7 +165,7 @@ class _OnRidePageState extends State<OnRidePage> {
                          children: [
                            const Icon(Icons.phone, size: 16, color: Colors.green),
                            const SizedBox(width: 5),
-                           Text("رقم الزبون: ${widget.rideData['customer_phone']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                           Text("${Lang.get('customer_phone_label')}: ${widget.rideData['customer_phone']}", style: const TextStyle(fontWeight: FontWeight.bold)),
                          ],
                        ),
                      ],

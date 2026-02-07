@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: mysql:8.0
@@ -8,11 +10,12 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - db_data:/var/lib/mysql
+      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
 
   backend:
-    build: .
+    build: ./backend
+    container_name: wasalni-backend
     ports:
       - "8080:80"
     environment:
@@ -23,7 +26,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ./uploads:/var/www/html/uploads
+      - ./backend/uploads:/var/www/html/uploads
 
 volumes:
   db_data:

@@ -11,6 +11,9 @@ import '../login.dart';
 import 'available_rides.dart';
 import 'wallet.dart';
 import 'services_fees.dart';
+import 'on_ride_page.dart';
+import '../services/notification_service.dart';
+import 'notifications_page.dart';
 
 class HomePage extends StatefulWidget {
   final int driverId;
@@ -30,6 +33,8 @@ class _HomePageState extends State<HomePage> {
   bool _isLocationEnabled = false;
   final Set<Marker> _markers = {};
   Timer? _locationTimer;
+  Timer? _activeRideTimer;
+  Map<String, dynamic>? activeRide;
 
   static const CameraPosition _riyadh = CameraPosition(
     target: LatLng(24.7136, 46.6753),
@@ -41,15 +46,24 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _checkLocationPermission();
     _fetchWalletInfo();
+    _fetchActiveRide();
+    // Start notification polling for Captain
+    NotificationService.startPolling(context, widget.driverId, 'driver');
     // Update location every 10 seconds if online
     _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if(isOnline) _updateLocation();
+    });
+    // Fetch active ride every 30 seconds
+    _activeRideTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _fetchActiveRide();
     });
   }
 
   @override
   void dispose() {
+    NotificationService.stopPolling();
     _locationTimer?.cancel();
+    _activeRideTimer?.cancel();
     super.dispose();
   }
 
@@ -86,7 +100,7 @@ class _HomePageState extends State<HomePage> {
 
   void _fetchWalletInfo() async {
     try {
-      var res = await http.get(Uri.parse("${Config.baseUrl}/wallet.php?driver_id=${widget.driverId}"));
+      var res = await http.get(Uri.parse("${Config.baseUrl}/wallet.php?driver_id=${widget.driverId}"), headers: Config.headers);
       var data = json.decode(res.body);
       if(mounted && data['success']) {
         setState(() {
@@ -95,9 +109,19 @@ class _HomePageState extends State<HomePage> {
           photoPath = data['photo_path'];
         });
       }
-    } catch(e) {
+    } catch(e) {}
+  }
 
-    }
+  void _fetchActiveRide() async {
+    try {
+      var res = await http.get(Uri.parse("${Config.baseUrl}/available_rides.php?action=active_ride&driver_id=${widget.driverId}"), headers: Config.headers);
+      var data = json.decode(res.body);
+      if(mounted && data['success']) {
+        setState(() => activeRide = data['ride']);
+      } else if(mounted) {
+        setState(() => activeRide = null);
+      }
+    } catch(e) {}
   }
 
   void _updateLocation() async {
@@ -112,6 +136,7 @@ class _HomePageState extends State<HomePage> {
       // Send to Backend
       await http.post(
         Uri.parse("${Config.baseUrl}/update_location.php"),
+        headers: Config.headers,
         body: {
           "driver_id": widget.driverId.toString(),
           "lat": position.latitude.toString(),
@@ -134,6 +159,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(Lang.get('home')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsPage(userId: widget.driverId, role: 'driver'))),
+          ),
+        ],
+      ),
       drawer: Drawer(
         child: ListView(
           children: [
@@ -241,24 +275,46 @@ class _HomePageState extends State<HomePage> {
                        ),
                      ],
                    ),
-                  // Online Status Toggle
-                   GestureDetector(
-                     onTap: _toggleOnline,
-                     child: Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                       decoration: BoxDecoration(
-                         color: isOnline ? const Color(0xFF2ECC71) : Colors.redAccent,
-                         borderRadius: BorderRadius.circular(20),
-                         boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                   // Online Status & Logout Toggle
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.end,
+                     children: [
+                       GestureDetector(
+                         onTap: _toggleOnline,
+                         child: Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                           decoration: BoxDecoration(
+                             color: isOnline ? const Color(0xFF2ECC71) : Colors.redAccent,
+                             borderRadius: BorderRadius.circular(20),
+                             boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                           ),
+                           child: Row(
+                             children: [
+                               Icon(isOnline ? Icons.wifi : Icons.wifi_off, color: Colors.white, size: 20),
+                               const SizedBox(width: 8),
+                               Text(isOnline ? Lang.get('online') : Lang.get('offline'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                             ],
+                           ),
+                         ),
                        ),
-                       child: Row(
-                         children: [
-                           Icon(isOnline ? Icons.wifi : Icons.wifi_off, color: Colors.white, size: 20),
-                           const SizedBox(width: 8),
-                           Text(isOnline ? Lang.get('online') : Lang.get('offline'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                         ],
-                       ),
-                     ),
+                       const SizedBox(height: 8),
+                       GestureDetector(
+                         onTap: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
+                            if(!mounted) return;
+                            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                         },
+                         child: Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                           decoration: BoxDecoration(
+                             color: Colors.white.withOpacity(0.2),
+                             borderRadius: BorderRadius.circular(10),
+                           ),
+                           child: Text(Lang.get('logout'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                         ),
+                       )
+                     ],
                    )
                 ],
               ),
@@ -303,6 +359,31 @@ class _HomePageState extends State<HomePage> {
                ),
             ),
           ),
+          // Ongoing Ride Card (New)
+          if(activeRide != null)
+          Positioned(
+            bottom: 120,
+            left: 20,
+            right: 20,
+            child: Card(
+              color: Colors.orange[50], 
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Colors.orange, width: 1)),
+              child: ListTile(
+                leading: const Icon(Icons.directions_car, color: Colors.orange, size: 30),
+                title: Text(Lang.get('ongoing_ride'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("${activeRide!['pickup_address']} -> ${activeRide!['dropoff_address']}"),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                  onPressed: () {
+                     Navigator.push(context, MaterialPageRoute(
+                       builder: (_) => OnRidePage(driverId: widget.driverId, rideData: activeRide!)
+                     ));
+                  },
+                  child: Text(Lang.get('resume_ride')),
+                ),
+              ),
+            ),
+          ),
           // Bottom Action Button
           Positioned(
             bottom: 40,
@@ -319,8 +400,9 @@ class _HomePageState extends State<HomePage> {
                   shadowColor: Colors.black45,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))
                 ),
-                onPressed: () {
-                   Navigator.push(context, MaterialPageRoute(builder: (_) => AvailableRidesPage(driverId: widget.driverId)));
+                onPressed: () async {
+                   await Navigator.push(context, MaterialPageRoute(builder: (_) => AvailableRidesPage(driverId: widget.driverId)));
+                   _fetchActiveRide(); // Refresh on return
                 },
               ),
             ),

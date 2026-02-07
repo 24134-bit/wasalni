@@ -28,7 +28,7 @@ class _AvailableRidesPageState extends State<AvailableRidesPage> {
       // Using 'action=list' to get pending rides
       // Note: Backend alignment might be needed depending on available_rides.php implementation
       // Assuming available_rides.php returns a JSON list of pending rides directly or via some structure.
-      var res = await http.get(Uri.parse("${Config.baseUrl}/available_rides.php?action=list&driver_id=${widget.driverId}"));
+      var res = await http.get(Uri.parse("${Config.baseUrl}/available_rides.php?action=list&driver_id=${widget.driverId}"), headers: Config.headers);
       
       if(mounted) {
         setState(() {

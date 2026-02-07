@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'deposit.dart';
 import 'config.dart';
+import 'lang.dart';
 import 'screens/ride_map.dart';
 
 class RidesPage extends StatefulWidget {
@@ -28,8 +30,8 @@ class _RidesPageState extends State<RidesPage> {
     setState(() => isLoading = true);
     try {
       // Fetch Rides
-      var resRides = await http.get(Uri.parse("${Config.baseUrl}/rides.php?action=list&driver_id=${widget.captainId}"));
-      var resBalance = await http.get(Uri.parse("${Config.baseUrl}/rides.php?action=balance&driver_id=${widget.captainId}"));
+      var resRides = await http.get(Uri.parse("${Config.baseUrl}/rides.php?action=list&driver_id=${widget.captainId}"), headers: Config.headers);
+      var resBalance = await http.get(Uri.parse("${Config.baseUrl}/rides.php?action=balance&driver_id=${widget.captainId}"), headers: Config.headers);
       
       setState(() {
         rides = json.decode(resRides.body);
@@ -46,13 +48,14 @@ class _RidesPageState extends State<RidesPage> {
     try {
       var res = await http.post(
         Uri.parse("${Config.baseUrl}/take_ride.php"),
+        headers: Config.headers,
         body: {"ride_id": ride['id'].toString(), "driver_id": widget.captainId.toString()}
       );
       var data = json.decode(res.body);
 
       if(!mounted) return;
       if(data["success"]){
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Ride Accepted! Prepare for pickup.")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(Lang.get('ride_accepted'))));
         _refreshData();
         
         // Navigate to Map
@@ -79,8 +82,8 @@ class _RidesPageState extends State<RidesPage> {
       appBar: AppBar(
         title: Column(
           children: [
-            const Text("Available Rides", style: TextStyle(fontSize: 16)),
-            Text("Balance: $balance", style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text(Lang.get('available_rides'), style: const TextStyle(fontSize: 16)),
+            Text("${Lang.get('curr_balance')}: $balance ${Lang.get('sar')}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
         actions: [
@@ -91,7 +94,16 @@ class _RidesPageState extends State<RidesPage> {
               _refreshData(); // Refresh balance after coming back
             },
           ),
-          IconButton(onPressed: _refreshData, icon: const Icon(Icons.refresh))
+          IconButton(onPressed: _refreshData, icon: const Icon(Icons.refresh)),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if(!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+          )
         ],
       ),
       body: isLoading 
@@ -119,12 +131,12 @@ class _RidesPageState extends State<RidesPage> {
                        Container(
                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                          decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(4)),
-                         child: Text("Status: ${r['status'].toString().toUpperCase()}", style: const TextStyle(color: Colors.white, fontSize: 10)),
+                         child: Text("${Lang.get('status')}: ${Lang.get('status_' + r['status'])}", style: const TextStyle(color: Colors.white, fontSize: 10)),
                        ),
                     const SizedBox(height: 5),
-                    Text("📍 Pickup: ${r['pickup_address']}"),
-                    Text("➡️ Dropoff: ${r['dropoff_address']}"),
-                    Text("💰 Price: ${r['total_price']}"),
+                    Text("📍 ${Lang.get('pickup')}: ${r['pickup_address']}"),
+                    Text("➡️ ${Lang.get('dropoff')}: ${r['dropoff_address']}"),
+                    Text("💰 ${Lang.get('price')}: ${r['total_price']} ${Lang.get('sar')}"),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -132,7 +144,7 @@ class _RidesPageState extends State<RidesPage> {
                         if(isAvailable)
                           ElevatedButton(
                             onPressed: () => _takeRide(r), 
-                            child: const Text("Take Ride")
+                            child: Text(Lang.get('accept_ride'))
                           ),
                         if(isAssignedToMe && r['status'] == 'accepted')
                           ElevatedButton(
@@ -143,11 +155,11 @@ class _RidesPageState extends State<RidesPage> {
                                ));
                                _refreshData();
                             }, 
-                            child: const Text("Track & Deliver")
+                            child: Text(Lang.get('on_trip_btn'))
                           ),
                         // If already delivered, maybe hide or show completed?
                         if(isAssignedToMe && r['status'] == 'delivered')
-                           const Text("✅ Completed", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+                           Text("✅ ${Lang.get('completed')}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
                       ],
                     )
                   ],

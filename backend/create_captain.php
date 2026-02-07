@@ -16,7 +16,7 @@ if(!$phone || !$password || !$name) {
 
 $photo_path = "";
 if(isset($_FILES['photo'])) {
-    $target_dir = "uploads/captains/";
+    $target_dir = __DIR__ . "/uploads/captains/";
     if(!is_dir($target_dir)) mkdir($target_dir, 0777, true);
     $filename = time() . "_" . basename($_FILES["photo"]["name"]);
     $target_file = $target_dir . $filename;

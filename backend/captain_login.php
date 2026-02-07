@@ -1,3 +1,4 @@
+<?php
 // Include the centralized DB and Header file
 include 'db.php';
 

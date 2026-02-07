@@ -15,7 +15,7 @@ if(!$driver_id || !$amount || !$reference_number) {
 
 $image_path = "";
 if(isset($_FILES['receipt'])) {
-    $target_dir = "uploads/";
+    $target_dir = __DIR__ . "/uploads/";
     if(!is_dir($target_dir)) mkdir($target_dir, 0777, true);
     $filename = time() . "_" . basename($_FILES["receipt"]["name"]);
     $target_file = $target_dir . $filename;
@@ -28,6 +28,8 @@ $stmt = $conn->prepare("INSERT INTO deposits (driver_id, amount, reference_numbe
 $stmt->bind_param("idssss", $driver_id, $amount, $reference_number, $method, $sender_phone, $image_path);
 
 if($stmt->execute()) {
+    include_once 'send_notification_func.php';
+    send_notification($conn, 'admin', null, 'طلب شحن جديد', "السائق رقم $driver_id طلب شحن الرصيد بمبلغ $amount");
     echo json_encode(["success" => true]);
 } else {
     echo json_encode(["success" => false, "error" => $conn->error]);

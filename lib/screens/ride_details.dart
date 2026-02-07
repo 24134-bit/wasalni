@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../config.dart';
@@ -23,7 +24,10 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
   late LatLng pickup;
   late LatLng dropoff;
   final Set<Marker> _markers = {};
+
   final Set<Polyline> _polylines = {};
+  double commissionRate = 10.0;
+  bool isSettingsLoaded = false;
 
   @override
   void initState() {
@@ -41,6 +45,22 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
       Marker(markerId: const MarkerId('p2'), position: dropoff, icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)),
     });
     _polylines.add(Polyline(polylineId: const PolylineId('route'), points: [pickup, dropoff], color: Colors.blue, width: 5));
+    _fetchSettings();
+  }
+
+  void _fetchSettings() async {
+    try {
+      var res = await http.get(Uri.parse("${Config.baseUrl}/get_settings.php"), headers: Config.headers);
+      var data = json.decode(res.body);
+      if(mounted) {
+        setState(() {
+          commissionRate = double.tryParse(data['commission_percent']?.toString() ?? "10") ?? 10.0;
+          isSettingsLoaded = true;
+        });
+      }
+    } catch(e) {
+      if(mounted) setState(() => isSettingsLoaded = true);
+    }
   }
 
   void _startRide() async {
@@ -48,6 +68,7 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
     try {
       var res = await http.post(
         Uri.parse("${Config.baseUrl}/take_ride.php"),
+        headers: Config.headers,
         body: {
           "ride_id": widget.rideData['id'].toString(),
           "driver_id": widget.driverId.toString()
@@ -78,15 +99,28 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
   Widget build(BuildContext context) {
     var r = widget.rideData;
     return Scaffold(
-      appBar: AppBar(title: Text(Lang.get('ride_details'))),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      appBar: AppBar(
+        title: Text(Lang.get('ride_details')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if(!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+          )
+        ],
+      ),
+      body: SafeArea(
         child: Column(
           children: [
             // Map Preview
             Expanded(
+              flex: 4,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
                 child: GoogleMap(
                   initialCameraPosition: CameraPosition(target: pickup, zoom: 12),
                   markers: _markers,
@@ -97,40 +131,63 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            // Info Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(15),
+            // Info Card & Button section
+            Expanded(
+              flex: 5,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 child: Column(
                   children: [
-                    _buildRow(Icons.location_on, Lang.get('pickup'), r['pickup_address']),
-                    const Divider(),
-                    _buildRow(Icons.flag, Lang.get('dropoff'), r['dropoff_address']),
-                    const Divider(),
-                    _buildRow(Icons.account_balance, Lang.get('price'), "${r['total_price']} MRU"),
-                    if(r['customer_phone'] != null) ...[
-                      const Divider(),
-                      _buildRow(Icons.phone, "رقم الزبون", r['customer_phone']),
-                    ],
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Column(
+                          children: [
+                            _buildRow(Icons.location_on, Lang.get('pickup'), r['pickup_address']),
+                            const Divider(),
+                            _buildRow(Icons.flag, Lang.get('dropoff'), r['dropoff_address']),
+                            const Divider(),
+                            _buildRow(Icons.account_balance, Lang.get('price'), "${r['total_price']} MRU"),
+                            const Divider(),
+                            if(!isSettingsLoaded) 
+                               const Center(child: LinearProgressIndicator())
+                            else ...[
+                               _buildRow(Icons.percent, "Commission (${commissionRate.toStringAsFixed(0)}%)", "-${(double.parse(r['total_price'].toString()) * (commissionRate/100)).toStringAsFixed(1)} MRU"),
+                               const Divider(),
+                               _buildRow(Icons.wallet, "Safe (Net)", "${(double.parse(r['total_price'].toString()) * (1 - (commissionRate/100))).toStringAsFixed(1)} MRU"),
+                            ],
+                            if(r['customer_phone'] != null) ...[
+                              const Divider(),
+                              _buildRow(Icons.phone, "رقم الزبون", r['customer_phone']),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 25),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2ECC71),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 8,
+                          shadowColor: Colors.green.withOpacity(0.4)
+                        ),
+                        onPressed: isProcessing ? null : _startRide,
+                        child: isProcessing 
+                          ? const CircularProgressIndicator(color: Colors.white) 
+                          : Text(Lang.get('accept_ride'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2ECC71)),
-                onPressed: isProcessing ? null : _startRide,
-                child: isProcessing 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : Text(Lang.get('accept_ride'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-            )
           ],
         ),
       ),

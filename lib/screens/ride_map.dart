@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:wasalni_app/config.dart';
+import '../lang.dart';
 
 class RideMapPage extends StatefulWidget {
   final int rideId;
@@ -44,13 +46,13 @@ class _RideMapPageState extends State<RideMapPage> {
         Marker(
           markerId: const MarkerId('pickup'),
           position: pickup,
-          infoWindow: InfoWindow(title: 'Pickup', snippet: widget.rideData['pickup_address']),
+          infoWindow: InfoWindow(title: Lang.get('pickup'), snippet: widget.rideData['pickup_address']),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
         Marker(
           markerId: const MarkerId('dropoff'),
           position: dropoff,
-          infoWindow: InfoWindow(title: 'Dropoff', snippet: widget.rideData['dropoff_address']),
+          infoWindow: InfoWindow(title: Lang.get('dropoff'), snippet: widget.rideData['dropoff_address']),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
       };
@@ -62,13 +64,14 @@ class _RideMapPageState extends State<RideMapPage> {
     try {
       var res = await http.post(
         Uri.parse("${Config.baseUrl}/complete_ride.php"),
+        headers: Config.headers,
         body: {"ride_id": widget.rideId.toString()}
       );
       var data = json.decode(res.body);
 
       if(!mounted) return;
       if(data["success"]){
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Ride Completed. Payment deducted.")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(Lang.get('ride_completed_success'))));
         Navigator.pop(context, true); // Return success
       } else {
          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to complete ride")));
@@ -85,7 +88,20 @@ class _RideMapPageState extends State<RideMapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Ride Navigation")),
+      appBar: AppBar(
+        title: Text(Lang.get('ride_details')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if(!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+          )
+        ],
+      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -109,7 +125,7 @@ class _RideMapPageState extends State<RideMapPage> {
                  child: Column(
                    mainAxisSize: MainAxisSize.min,
                    children: [
-                     Text("Going to: ${widget.rideData['dropoff_address']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                     Text("${Lang.get('going_to')} ${widget.rideData['dropoff_address']}", style: const TextStyle(fontWeight: FontWeight.bold)),
                      const SizedBox(height: 10),
                      if(isLoading)
                        const CircularProgressIndicator()
@@ -119,7 +135,7 @@ class _RideMapPageState extends State<RideMapPage> {
                          child: ElevatedButton(
                            onPressed: _completeRide,
                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                           child: const Text("Delivered & Finish"),
+                           child: Text(Lang.get('finish_ride')),
                          ),
                        )
                    ],

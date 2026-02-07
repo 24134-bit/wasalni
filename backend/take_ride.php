@@ -32,8 +32,11 @@ $driverQuery->execute();
 $driverResult = $driverQuery->get_result()->fetch_assoc();
 $balance = $driverResult['balance'];
 
-// 2. Calculate Commission (10%)
-$commission = $price * 0.10;
+// 2. Fetch Settings for Commission
+$setQ = $conn->query("SELECT commission_percent FROM settings LIMIT 1");
+$settings = $setQ->fetch_assoc();
+$commParams = $settings['commission_percent'] ?? 10;
+$commission = $price * ($commParams / 100);
 
 // 3. Check if driver has enough balance
 if ($balance < $commission) {
@@ -45,7 +48,7 @@ if ($balance < $commission) {
 $conn->begin_transaction();
 try {
     // Update Ride
-    $stmt = $conn->prepare("UPDATE rides SET status = 'accepted', driver_id = ? WHERE id = ? AND status = 'pending'");
+    $stmt = $conn->prepare("UPDATE rides SET status = 'accepted', driver_id = ?, start_time = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'");
     $stmt->bind_param("ii", $driver_id, $ride_id);
     $stmt->execute();
     

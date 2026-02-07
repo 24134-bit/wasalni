@@ -5,5 +5,12 @@ docker-compose.yml
 node_modules
 db_data
 tests
+*.log
 .env
+.env.*
 README_DEPLOY.md
+render.yaml
+setup.sql
+update_*.sql
+migration_*.sql
+*.md

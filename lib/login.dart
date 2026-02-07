@@ -25,6 +25,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       var res = await http.post(
         Uri.parse(url),
+        headers: Config.headers,
         body: {"phone": phone.text, "password": password.text},
       ).timeout(const Duration(seconds: 10));
 
@@ -32,14 +33,20 @@ class _LoginPageState extends State<LoginPage> {
 
       if (res.statusCode == 200) {
         try {
-          // Regex to find the first JSON object '{...}'
-          final jsonFinder = RegExp(r'\{.*\}', dotAll: true);
+          // Try to find the JSON part of the response (handles InfinityFree security scripts)
+          final jsonFinder = RegExp(r'\{"success":.*\}', dotAll: true);
           final match = jsonFinder.firstMatch(res.body);
-          String cleanBody = match != null ? match.group(0)! : res.body;
-
-          debugPrint("Clean Body: '$cleanBody'"); // DEBUG: See what we are parsing
-
-          if (cleanBody.isEmpty) throw Exception("Empty JSON body");
+          
+          if (match == null) {
+            String errorMsg = "Server error or connectivity issue.";
+            if (res.body.contains("aes.js") || res.body.contains("__test")) {
+               errorMsg = "InfinityFree Security blocking. Please rebuild the APK with the new headers I added.";
+            }
+            throw Exception(errorMsg);
+          }
+          
+          String cleanBody = match.group(0)!;
+          debugPrint("Clean JSON captured: '$cleanBody'");
 
           var data = json.decode(cleanBody);
           if (data["success"] == true) { // Check explicit true
@@ -68,15 +75,31 @@ class _LoginPageState extends State<LoginPage> {
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error: ${data["error"]}")));
+                SnackBar(content: Text("Error: ${data["error"] ?? 'Invalid credentials'}")));
           }
         } catch (e) {
           showDialog(
               context: context,
               builder: (_) => AlertDialog(
-                  title: const Text("JSON Error - Show this to Developer"),
+                  title: const Text("Server Insight Required"),
                   content: SingleChildScrollView(
-                    child: Text("Error: $e\n\nRaw Body:\n${res.body}"),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("The server returned something unexpected. This often happens on free hosting (InfinityFree) due to security tests or 404 errors.", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red[800])),
+                        const Divider(),
+                        const Text("Diagnostic Trace:", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(e.toString()),
+                        const SizedBox(height: 10),
+                        const Text("Server Response (First 500 chars):", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.grey[200],
+                          child: Text(res.body.length > 500 ? res.body.substring(0, 500) + "..." : res.body, 
+                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace')),
+                        ),
+                      ],
+                    ),
                   ),
                   actions: [TextButton(onPressed: ()=>Navigator.pop(context), child: const Text("OK"))],
               ));
