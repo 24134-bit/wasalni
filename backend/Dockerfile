@@ -11,7 +11,7 @@ RUN echo '<VirtualHost *:80>\n\
     ServerAdmin webmaster@localhost\n\
     DocumentRoot /var/www/html\n\
     <Directory /var/www/html>\n\
-        Options -Indexes +FollowSymLinks\n\
+        Options FollowSymLinks\n\
         AllowOverride All\n\
         Require all granted\n\
     </Directory>\n\
@@ -23,9 +23,10 @@ RUN echo '<VirtualHost *:80>\n\
 COPY . /var/www/html/
 
 # Set permissions and create necessary directories
-RUN mkdir -p uploads/captains && \
-    chmod -R 755 /var/www/html && \
+RUN mkdir -p /var/www/html/uploads/captains && \
     chown -R www-data:www-data /var/www/html && \
+    find /var/www/html -type d -exec chmod 755 {} \; && \
+    find /var/www/html -type f -exec chmod 644 {} \; && \
     chmod +x /var/www/html/start.sh
 
 EXPOSE 80
