@@ -1,5 +1,4 @@
 #!/bin/bash
-# Enable PHP module
-a2enmod php8.1
-# Restart Apache
+
+# Start Apache in foreground
 apache2-foreground
