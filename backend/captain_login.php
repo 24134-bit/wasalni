@@ -13,16 +13,13 @@ if(empty($phone) || empty($password)){
     exit();
 }
 
-$stmt = $conn->prepare("SELECT id, name, role, balance, phone FROM users WHERE phone = ? AND password = ?");
-$stmt->bind_param("ss", $phone, $password);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $conn->prepare("SELECT id, name, role, balance, phone FROM users WHERE phone = :phone AND password = :password");
+$stmt->execute(['phone' => $phone, 'password' => $password]);
 
 // Clean any buffer before sending JSON
 ob_clean();
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
+if ($user = $stmt->fetch()) {
     // Force types to be safe
     $user['id'] = (int)$user['id'];
     $user['balance'] = (float)$user['balance'];
