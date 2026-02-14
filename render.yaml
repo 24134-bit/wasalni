@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free
     region: frankfurt
+    rootDir: backend
     envVars:
       - key: DATABASE_URL
         fromDatabase:

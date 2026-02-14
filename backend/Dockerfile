@@ -29,9 +29,8 @@ COPY . /var/www/html/
 RUN mkdir -p /var/www/html/uploads/captains && \
     chown -R www-data:www-data /var/www/html && \
     find /var/www/html -type d -exec chmod 755 {} \; && \
-    find /var/www/html -type f -exec chmod 644 {} \; && \
-    chmod +x /var/www/html/start.sh
+    find /var/www/html -type f -exec chmod 644 {} \;
 
 EXPOSE 80
 
-CMD ["/var/www/html/start.sh"]
+CMD ["apache2-foreground"]

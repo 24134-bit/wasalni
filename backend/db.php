@@ -44,7 +44,11 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
-    $conn->exec("SET time_zone = '+00:00'");
+    if ($conn->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+        $conn->exec("SET time_zone = '+00:00'");
+    } else {
+        $conn->exec("SET TIME ZONE 'UTC'");
+    }
 
 } catch (PDOException $e) {
     die(json_encode(["success" => false, "error" => "DB Connection Failed: " . $e->getMessage()]));
