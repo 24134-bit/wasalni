@@ -9,4 +9,3 @@ function send_notification($conn, $role, $user_id, $title, $body) {
         $stmt->execute(['role' => $role, 'user_id' => $user_id, 'title' => $title, 'body' => $body]);
     }
 }
-?>

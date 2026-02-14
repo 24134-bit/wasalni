@@ -19,21 +19,22 @@ if (!$user_id && $role !== 'admin') {
 // 2. OR my role (e.g. 'driver' or 'admin')
 // 3. OR 'all'
 
-$sql = "SELECT * FROM notifications WHERE id > ? AND (
+$sql = "SELECT * FROM notifications WHERE id > :last_id AND (
             (target_role = 'all') 
-            OR (target_role = ? AND target_user_id IS NULL) 
-            OR (target_user_id = ?)
+            OR (target_role = :role AND target_user_id IS NULL) 
+            OR (target_user_id = :user_id)
         ) ORDER BY id ASC";
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("isi", $last_id, $role, $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$notifs = [];
-while ($row = $result->fetch_assoc()) {
-    $notifs[] = $row;
+try {
+    $stmt = $conn->prepare($sql);
+    $stmt->execute([
+        ':last_id' => $last_id,
+        ':role' => $role,
+        ':user_id' => $user_id
+    ]);
+    $notifs = $stmt->fetchAll();
+    echo json_encode($notifs);
+} catch (PDOException $e) {
+    echo json_encode([]);
 }
-
-echo json_encode($notifs);
 ?>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'rides.dart';
 import 'services/notification_service.dart';
+import 'lang.dart';
 
 class HomePage extends StatefulWidget {
   final Map captain;

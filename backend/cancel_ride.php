@@ -10,45 +10,33 @@ if(!$ride_id) {
     exit;
 }
 
-$conn->begin_transaction();
+$conn->beginTransaction();
 try {
     // 1. Get Ride Details (Price and Driver)
-    $stmt = $conn->prepare("SELECT total_price, driver_id, status FROM rides WHERE id = ?");
-    $stmt->bind_param("i", $ride_id);
-    $stmt->execute();
-    $ride = $stmt->get_result()->fetch_assoc();
+    $stmt = $conn->prepare("SELECT total_price, driver_id, status FROM rides WHERE id = :id");
+    $stmt->execute([':id' => $ride_id]);
+    $ride = $stmt->fetch();
 
-    if ($ride['status'] != 'accepted' && $ride['status'] != 'arrived') {
-        throw new Exception("Cannot cancel logic for this status");
+    if (!$ride) throw new Exception("Ride not found");
+    if ($ride['status'] != 'accepted' && $ride['status'] != 'arrived' && $ride['status'] != 'pending') {
+        throw new Exception("Cannot cancel logic for this status: " . $ride['status']);
     }
 
     $price = $ride['total_price'];
     $assigned_driver = $ride['driver_id'];
-    $status = $ride['status']; // Get status for the condition
+    $status = $ride['status'];
 
-    // 2. Refund Commission if the ride was accepted
-    if ($assigned_driver && ($status == 'accepted' || $status == 'arrived' || $status == 'on_trip')) {
-        // Fetch dynamic commission
-        $setQ = $conn->query("SELECT commission_percent FROM settings LIMIT 1");
-        $settings = $setQ->fetch_assoc();
-        $commRate = $settings['commission_percent'] ?? 10;
-        $commission = $price * ($commRate / 100);
-
-        $refundObj = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-        $refundObj->bind_param("di", $commission, $assigned_driver);
-        $refundObj->execute();
-    }
-    // 3. Mark Ride as Cancelled (or reset to pending depending on business logic)
-    // User requested: "degeler" (unfreeze). If cancelled, we assume it's dead.
-    $updateRide = $conn->prepare("UPDATE rides SET status = 'pending', driver_id = NULL WHERE id = ?");
-    $updateRide->bind_param("i", $ride_id);
-    $updateRide->execute();
+    // 2. Commission is NOT deducted until ride is finished, so no refund needed.
+    
+    // 3. Mark Ride as Pending again
+    $updateRide = $conn->prepare("UPDATE rides SET status = 'pending', driver_id = NULL WHERE id = :id");
+    $updateRide->execute([':id' => $ride_id]);
 
     $conn->commit();
     echo json_encode(["success" => true]);
 
 } catch (Exception $e) {
-    $conn->rollback();
+    $conn->rollBack();
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>

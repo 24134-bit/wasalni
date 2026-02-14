@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Icon(Icons.local_taxi, size: 100, color: Colors.white),
             SizedBox(height: 20),
             Text(
-              "Wasalni",
+              "Tariki",
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

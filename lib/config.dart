@@ -1,6 +1,10 @@
 class Config {
   // Production URL on Render
-  static const String baseUrl = "https://wasalni-1.onrender.com";
+  // static const String baseUrl = "https://wasalni-1.onrender.com";
+  
+  // For Local XAMPP Testing:
+  // Note: 127.0.0.1 only works for Emulators. For a real phone, use your IP (e.g., 192.168.100.239)
+  static const String baseUrl = "http://127.0.0.1/wasalni/backend"; 
 
   static Map<String, String> get headers => {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

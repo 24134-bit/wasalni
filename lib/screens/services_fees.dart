@@ -52,7 +52,7 @@ class _ServicesFeesPageState extends State<ServicesFeesPage> {
                   _buildFeeItem("قيمة الدقيقة", "${settings?['price_min'] ?? '0'} أوقية"),
                   _buildFeeItem("القيمة الادنى (Base Fare)", "${settings?['base_fare'] ?? '0'} أوقية"),
                   const Divider(height: 40),
-                  _buildFeeItem("رسوم وصلني (Commission)", "% ${settings?['commission_percent'] ?? '0'}"),
+                  _buildFeeItem("رسوم طريقي (Commission)", "% ${settings?['commission_percent'] ?? '0'}"),
                   const SizedBox(height: 30),
                   Container(
                     padding: const EdgeInsets.all(15),
@@ -68,7 +68,7 @@ class _ServicesFeesPageState extends State<ServicesFeesPage> {
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
-                            "يرجى العلم بأن وصلني عند احتساب القيمة الإجمالية للرحلة، فإنها تتضمن المسافة الإضافية للرحلة والوقت الإضافي؛ ومع ذلك، لا يتم احتساب رسوم مقابل جزء صغير من المسافة والوقت للركاب بعد تجاوز الحد الأساسي.",
+                            "يرجى العلم بأن طريقي عند احتساب القيمة الإجمالية للرحلة، فإنها تتضمن المسافة الإضافية للرحلة والوقت الإضافي؛ ومع ذلك، لا يتم احتساب رسوم مقابل جزء صغير من المسافة والوقت للركاب بعد تجاوز الحد الأساسي.",
                             style: TextStyle(height: 1.5, fontSize: 13),
                           ),
                         ),

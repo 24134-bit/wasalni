@@ -22,6 +22,10 @@ class _OnRidePageState extends State<OnRidePage> {
   final Completer<GoogleMapController> _controller = Completer();
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  Timer? _priceTimer;
+  double _currentPrice = 0.0;
+  double _pricePerMin = 0.0;
+  bool isOpenRide = false;
   bool isLoading = false;
   late LatLng pickup;
   late LatLng dropoff;
@@ -29,6 +33,9 @@ class _OnRidePageState extends State<OnRidePage> {
   @override
   void initState() {
     super.initState();
+    isOpenRide = widget.rideData['type'] == 'open';
+    _currentPrice = double.tryParse(widget.rideData['total_price'].toString()) ?? 0.0;
+    
     pickup = LatLng(
       double.parse(widget.rideData['pickup_lat'].toString()), 
       double.parse(widget.rideData['pickup_lng'].toString())
@@ -39,6 +46,39 @@ class _OnRidePageState extends State<OnRidePage> {
     );
     _setMarkers();
     _setPolylines();
+
+    if (isOpenRide) {
+      _fetchSettingsAndStartTimer();
+    }
+  }
+
+  void _fetchSettingsAndStartTimer() async {
+    try {
+      var res = await http.get(Uri.parse("${Config.baseUrl}/get_settings.php"), headers: Config.headers);
+      var settings = json.decode(res.body);
+      _pricePerMin = double.tryParse(settings['price_min'].toString()) ?? 1.0;
+      
+      // If price is 0 (just started), set it to base_fare
+      if (_currentPrice == 0) {
+        _currentPrice = double.tryParse(settings['base_fare'].toString()) ?? 5.0;
+      }
+
+      _priceTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            _currentPrice += _pricePerMin;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("Error fetching settings: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceTimer?.cancel();
+    super.dispose();
   }
 
   void _setPolylines() {
@@ -170,6 +210,23 @@ class _OnRidePageState extends State<OnRidePage> {
                        ),
                      ],
                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.monetization_on, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${Lang.get('price')}: ${_currentPrice.toStringAsFixed(2)} ${Lang.get('sar')}",
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (isOpenRide) 
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text("(+ $_pricePerMin ${Lang.get('sar')} / min)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        ),
                      const Divider(),
                      const SizedBox(height: 10),
                      SizedBox(

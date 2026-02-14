@@ -4,17 +4,17 @@ import 'login.dart';
 
 
 void main() {
-  runApp(const WasalniApp());
+  runApp(const TarikiApp());
 }
 
-class WasalniApp extends StatelessWidget {
-  const WasalniApp({super.key});
+class TarikiApp extends StatelessWidget {
+  const TarikiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Wasalni',
+      title: 'Tariki',
       theme: ThemeData(
         primaryColor: const Color(0xFF0D47A1), // Navy Blue
         colorScheme: ColorScheme.fromSwatch().copyWith(

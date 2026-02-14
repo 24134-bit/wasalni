@@ -1,6 +1,6 @@
 {
-    "name": "wasalni_app",
-    "short_name": "wasalni_app",
+    "name": "Tariki",
+    "short_name": "Tariki",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

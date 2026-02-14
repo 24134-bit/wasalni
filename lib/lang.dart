@@ -32,11 +32,11 @@ class Lang {
     'car_number': {'fr': 'Numéro de voiture', 'ar': 'رقم السيارة'},
     'loc_required': {'fr': 'Localisation requise pour continuer', 'ar': 'يجب تفعيل الموقع للمتابعة'},
     'security_warning': {
-      'fr': 'Attention: Ne transférez pas vers un compte qui n’a pas le même nom que l’application pour éviter le vol.',
-      'ar': 'تنبيه: لا تقم بالتحويل إلى حساب لا يحمل نفس اسم التطبيق لتجنب السرقة.'
+      'fr': "Attention : N'envoyez pas d'argent depuis un numéro qui ne porte pas votre nom enregistré dans l'application.",
+      'ar': 'تنبيه: لا تقم بتحويل الأموال من رقم غير مسجل باسمك في التطبيق.'
     },
     'search_loc': {'fr': 'Rechercher un lieu', 'ar': 'البحث عن موقع'},
-    'app_name': {'fr': 'Wasalni', 'ar': 'وصلني'},
+    'app_name': {'fr': 'Tariki', 'ar': 'طريقي'},
     'services_fees_title': {'fr': 'Services et Frais', 'ar': 'الخدمات و الرسوم'},
     'home': {'fr': 'Accueil', 'ar': 'الرئيسية'},
     'wallet': {'fr': 'Portefeuille', 'ar': 'المحفظة'},
@@ -112,5 +112,13 @@ class Lang {
     'resume_ride': {'fr': 'Reprendre', 'ar': 'متابعة'},
     'notifications': {'fr': 'Notifications', 'ar': 'الإشعارات'},
     'no_notifications': {'fr': 'Aucune notification', 'ar': 'لا توجد إشعارات'},
+    'min_balance_msg': {
+      'fr': 'Solde minimum de 50 MRU requis pour les courses ouvertes.',
+      'ar': 'يجب توفر رصيد 50 أوقية على الأقل لقبوول الرحلات المفتوحة.'
+    },
+    'insufficient_balance': {
+      'fr': 'Solde insuffisant pour couvrir la commission.',
+      'ar': 'الرصيد غير كافٍ لتغطية عمولة الرحلة.'
+    },
   };
 }

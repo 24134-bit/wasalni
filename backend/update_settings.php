@@ -6,12 +6,16 @@ $price_min = $_POST['price_min'];
 $base_fare = $_POST['base_fare'];
 $commission_percent = $_POST['commission_percent'] ?? 10;
 
-$stmt = $conn->prepare("UPDATE settings SET price_km = ?, price_min = ?, base_fare = ?, commission_percent = ? WHERE id = 1");
-$stmt->bind_param("dddd", $price_km, $price_min, $base_fare, $commission_percent);
-
-if ($stmt->execute()) {
+try {
+    $stmt = $conn->prepare("UPDATE settings SET price_km = :price_km, price_min = :price_min, base_fare = :base_fare, commission_percent = :commission WHERE id = 1");
+    $stmt->execute([
+        ':price_km' => $price_km,
+        ':price_min' => $price_min,
+        ':base_fare' => $base_fare,
+        ':commission' => $commission_percent
+    ]);
     echo json_encode(["success" => true]);
-} else {
-    echo json_encode(["success" => false, "error" => $conn->error]);
+} catch (PDOException $e) {
+    echo json_encode(["success" => false, "error" => "Update failed: " . $e->getMessage()]);
 }
 ?>

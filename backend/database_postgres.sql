@@ -1,4 +1,4 @@
--- Wasalni Consolidated Database Schema for PostgreSQL
+-- Tariki Consolidated Database Schema for PostgreSQL
 -- Compatible with Render.com Managed Postgres
 
 -- 1. Users Table
@@ -7,13 +7,14 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(20) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     name VARCHAR(100),
-    role VARCHAR(20) CHECK (role IN ('driver', 'admin')) DEFAULT 'driver',
+    role VARCHAR(20) CHECK (role IN ('driver', 'admin', 'user')) DEFAULT 'user',
     balance DECIMAL(10, 2) DEFAULT 0.00,
     car_number VARCHAR(50),
     photo_path VARCHAR(255),
     last_lat DECIMAL(10, 8) DEFAULT 0.00000000,
     last_lng DECIMAL(11, 8) DEFAULT 0.00000000,
-    is_online BOOLEAN DEFAULT FALSE
+    is_online BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Rides Table
@@ -25,10 +26,10 @@ CREATE TABLE IF NOT EXISTS rides (
     pickup_lng DECIMAL(11, 8) DEFAULT 0.00000000,
     dropoff_lat DECIMAL(10, 8) DEFAULT 0.00000000,
     dropoff_lng DECIMAL(11, 8) DEFAULT 0.00000000,
-    total_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) DEFAULT 0.00,
     customer_phone VARCHAR(20),
     status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'arrived', 'on_trip', 'delivered', 'cancelled')) DEFAULT 'pending',
-    type VARCHAR(20) CHECK (type IN ('open', 'closed')) DEFAULT 'closed',
+    type VARCHAR(20) CHECK (type IN ('open', 'fixed')) DEFAULT 'fixed',
     driver_id INT DEFAULT NULL,
     start_time TIMESTAMP NULL DEFAULT NULL,
     end_time TIMESTAMP NULL DEFAULT NULL,
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS settings (
 -- 5. Notifications Table
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    target_role VARCHAR(20) CHECK (target_role IN ('admin', 'driver', 'all')) NOT NULL,
+    target_role VARCHAR(20) CHECK (target_role IN ('admin', 'driver', 'user', 'all')) NOT NULL,
     target_user_id INT DEFAULT NULL,
     title VARCHAR(100) NOT NULL,
     body TEXT NOT NULL,
@@ -79,7 +80,7 @@ INSERT INTO settings (id, price_km, price_min, base_fare, commission_percent)
 VALUES (1, 10.00, 1.00, 5.00, 10.00)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO users (phone, password, name, role, balance) VALUES 
-('055555555', '123', 'Driver Ahmed', 'driver', 0.00),
-('066666666', 'admin', 'Admin User', 'admin', 0.00)
+-- Default Admin
+INSERT INTO users (phone, password, name, role, balance) 
+VALUES ('admin', 'admin', 'Super Admin', 'admin', 0.00)
 ON CONFLICT (phone) DO NOTHING;

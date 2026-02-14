@@ -234,19 +234,48 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   void _process(int id, bool approved) async {
     final action = approved ? 'approve' : 'reject';
+    http.Response? res;
     try {
-      await http.post(
+      res = await http.post(
         Uri.parse("${Config.baseUrl}/admin_approve_recharge.php"),
         headers: Config.headers,
         body: {"id": id.toString(), "action": action}
       );
+      
+      final respStr = res.body;
+      final jsonFinder = RegExp(r'\{.*\}', dotAll: true);
+      final match = jsonFinder.firstMatch(respStr);
+      String cleanBody = match != null ? match.group(0)! : respStr;
+      
+      var data = json.decode(cleanBody);
+      
       if(!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approved ? "Approved" : "Rejected"))
-      );
-      _loadDeposits();
+      if (data['success'] == true) {
+        String msg = approved ? "Approved Successfully" : "Rejected Successfully";
+        if (data['new_balance'] != null) {
+          msg += ". New Balance: ${data['new_balance']}";
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.green)
+        );
+        _loadDeposits();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${data['error']}"), backgroundColor: Colors.red)
+        );
+      }
     } catch(e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if(mounted) {
+        String errorMsg = "Format Error: $e";
+        if (res != null) {
+          errorMsg += "\nRaw Response: ${res.body}";
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(errorMsg), 
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 10),
+        ));
+      }
     }
   }
 
@@ -420,7 +449,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   margin: const EdgeInsets.all(10),
                   child: ExpansionTile(
                     leading: const Icon(Icons.monetization_on, color: Colors.orange),
-                    title: Text("${Lang.get('amount')}: ${d['amount']} ${Lang.get('sar')}"),
+                    title: Text("${d['driver_name'] ?? 'Driver #${d['driver_id']}'} - ${Lang.get('amount')}: ${d['amount']} MRU"),
                     subtitle: Text("الرقم المحول منه: ${d['sender_phone']}\nرقم العملية: ${d['reference_number']}\n${Lang.get('select_method')}: ${d['method']}"),
                     children: [
                        Padding(
@@ -440,13 +469,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                                    icon: const Icon(Icons.check),
                                    label: Text(Lang.get('approve')),
-                                   onPressed: () => _process(int.parse(d['id']), true),
+                                   onPressed: () => _process(int.parse(d['id'].toString()), true),
                                  ),
                                  ElevatedButton.icon(
                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                    icon: const Icon(Icons.close),
                                    label: Text(Lang.get('reject')),
-                                   onPressed: () => _process(int.parse(d['id']), false),
+                                   onPressed: () => _process(int.parse(d['id'].toString()), false),
                                  ),
                                ],
                              )
@@ -460,44 +489,50 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             ),
           
           // Captains Tab
-          FutureBuilder(
-            future: http.get(Uri.parse("${Config.baseUrl}/get_captains.php"), headers: Config.headers),
-            builder: (ctx, AsyncSnapshot<http.Response> snapshot) {
-               if(snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-               if(snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
-               
-               var captains = [];
-               try {
-                 captains = json.decode(snapshot.data!.body);
-               } catch(e) {}
-
-               if(captains.isEmpty) return const Center(child: Text("No captains found."));
-
-               return ListView.builder(
-                 itemCount: captains.length,
-                 itemBuilder: (ctx, i) {
-                   var c = captains[i];
-                   bool isOnline = c['is_online'] == '1';
-                   return Card(
-                     child: ListTile(
-                       leading: CircleAvatar(
-                         backgroundColor: isOnline ? Colors.green : Colors.grey,
-                         backgroundImage: (c['photo_path'] != null && c['photo_path'] != "") 
-                           ? NetworkImage("${Config.baseUrl}/${c['photo_path']}") 
-                           : null,
-                         child: (c['photo_path'] == null || c['photo_path'] == "") 
-                           ? const Icon(Icons.person, color: Colors.white) 
-                           : null,
+          RefreshIndicator(
+            onRefresh: () async {
+              setState(() {});
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: FutureBuilder(
+              future: http.get(Uri.parse("${Config.baseUrl}/get_captains.php"), headers: Config.headers),
+              builder: (ctx, AsyncSnapshot<http.Response> snapshot) {
+                 if(snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                 if(snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+                 
+                 var captains = [];
+                 try {
+                   captains = json.decode(snapshot.data!.body);
+                 } catch(e) {}
+  
+                 if(captains.isEmpty) return const Center(child: Text("No captains found."));
+  
+                 return ListView.builder(
+                   itemCount: captains.length,
+                   itemBuilder: (ctx, i) {
+                     var c = captains[i];
+                     bool isOnline = c['is_online'] == '1' || c['is_online'] == true;
+                     return Card(
+                       child: ListTile(
+                         leading: CircleAvatar(
+                           backgroundColor: isOnline ? Colors.green : Colors.grey,
+                           backgroundImage: (c['photo_path'] != null && c['photo_path'] != "") 
+                             ? NetworkImage("${Config.baseUrl}/${c['photo_path']}") 
+                             : null,
+                           child: (c['photo_path'] == null || c['photo_path'] == "") 
+                             ? const Icon(Icons.person, color: Colors.white) 
+                             : null,
+                         ),
+                         title: Text("${c['name'] ?? "Driver ${c['id']}"} (${c['phone']})"),
+                         subtitle: Text("${Lang.get('car_number')}: ${c['car_number'] ?? 'N/A'}\n${Lang.get('wallet')}: ${c['balance']} MRU"),
+                         isThreeLine: true,
+                         trailing: Icon(Icons.circle, color: isOnline ? Colors.green : Colors.grey),
                        ),
-                       title: Text("${c['name'] ?? "Driver ${c['id']}"} (${c['phone']})"),
-                       subtitle: Text("${Lang.get('car_number')}: ${c['car_number'] ?? 'N/A'}\n${Lang.get('wallet')}: ${c['balance']} ${Lang.get('sar')}"),
-                       isThreeLine: true,
-                       trailing: Icon(Icons.circle, color: c['is_online'] == "1" ? Colors.green : Colors.grey),
-                     ),
-                   );
-                 },
-               );
-            }
+                     );
+                   },
+                 );
+              }
+            ),
           ),
 
           // Create Ride Tab

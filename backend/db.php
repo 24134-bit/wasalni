@@ -1,6 +1,7 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+date_default_timezone_set('UTC');
 
 // Set headers for JSON and CORS
 header("Access-Control-Allow-Origin: *");
@@ -29,22 +30,22 @@ try {
         $db_user = $p['user'];
         $db_pass = $p['pass'];
     } else {
-        // Fallback to individual environment variables
+        // Fallback to individual environment variables (MySQL for XAMPP)
         $host = getenv('DB_HOST') ?: "localhost";
-        $port = getenv('DB_PORT') ?: "5432";
+        $port = getenv('DB_PORT') ?: "3306";
         $dbname = getenv('DB_NAME') ?: "wasalni";
         $db_user = getenv('DB_USER') ?: "root";
         $db_pass = getenv('DB_PASS') ?: "";
 
-        $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
+        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
     }
 
     $conn = new PDO($dsn, $db_user, $db_pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
+    $conn->exec("SET time_zone = '+00:00'");
 
 } catch (PDOException $e) {
     die(json_encode(["success" => false, "error" => "DB Connection Failed: " . $e->getMessage()]));
 }
-?>

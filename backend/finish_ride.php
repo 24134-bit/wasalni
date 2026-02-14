@@ -12,82 +12,70 @@ if(!$ride_id) {
 $d_lat = $_POST['d_lat'] ?? 0;
 $d_lng = $_POST['d_lng'] ?? 0;
 
-// Get Ride Info
-$q = $conn->prepare("SELECT type, pickup_lat, pickup_lng, start_time FROM rides WHERE id = ?");
-$q->bind_param("i", $ride_id);
-$q->execute();
-$ride = $q->get_result()->fetch_assoc();
+try {
+    $conn->beginTransaction();
 
-if ($ride['type'] == 'open') {
-    // Calculate Price
-    include 'price_helper.php'; // ensure this has helper functions or fetch settings manually
-    
-    // Fetch Settings
-    $sQuery = $conn->query("SELECT * FROM settings WHERE id = 1");
-    $settings = $sQuery->fetch_assoc();
-    
-    $startTime = strtotime($ride['start_time']);
-    $endTime = time();
-    $duration_min = round(($endTime - $startTime) / 60, 2);
-    if($duration_min < 0) $duration_min = 0;
+    // 1. Fetch Ride and Settings with locking to prevent race conditions
+    // Use TIMESTAMPDIFF to let the DB handle the duration calculation (avoids TZ issues)
+    $q = $conn->prepare("SELECT *, TIMESTAMPDIFF(MINUTE, start_time, CURRENT_TIMESTAMP) as duration_min FROM rides WHERE id = :ride_id FOR UPDATE");
+    $q->execute([':ride_id' => $ride_id]);
+    $ride = $q->fetch();
 
-    // Calculate Distance (Haversine)
-    function distance($lat1, $lon1, $lat2, $lon2) {
-        if (($lat1 == $lat2) && ($lon1 == $lon2)) return 0;
-        $theta = $lon1 - $lon2;
-        $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-        $dist = acos($dist);
-        $dist = rad2deg($dist);
-        $miles = $dist * 60 * 1.1515;
-        return $miles * 1.609344;
+    if (!$ride) {
+        throw new Exception("Ride not found");
     }
 
-    $dist_km = distance($ride['pickup_lat'], $ride['pickup_lng'], $d_lat, $d_lng);
-    
-    $final_price = $settings['base_fare'] + ($dist_km * $settings['price_km']) + ($duration_min * $settings['price_min']);
-    $final_price = round($final_price, 2);
-
-    // Start Transaction for updating ride and deducting balance
-    $conn->begin_transaction();
-    try {
-        // Update Ride with Price, Location, End Time
-        $stmt = $conn->prepare("UPDATE rides SET status = 'delivered', dropoff_lat = ?, dropoff_lng = ?, total_price = ?, end_time = CURRENT_TIMESTAMP WHERE id = ?");
-        $stmt->bind_param("dddi", $d_lat, $d_lng, $final_price, $ride_id);
-        $stmt->execute();
-
-        // Get Driver ID
-        $dQuery = $conn->prepare("SELECT driver_id FROM rides WHERE id = ?");
-        $dQuery->bind_param("i", $ride_id);
-        $dQuery->execute();
-        $driver_id = $dQuery->get_result()->fetch_assoc()['driver_id'];
-
-        if($driver_id) {
-            $commRate = $settings['commission_percent'] ?? 10;
-            $commission = $final_price * ($commRate / 100);
-            
-            // Deduct from balance
-            $uBal = $conn->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
-            $uBal->bind_param("di", $commission, $driver_id);
-            $uBal->execute();
-        }
-
-        $conn->commit();
-    } catch (Exception $e) {
-        $conn->rollback();
-        echo json_encode(["success" => false, "error" => $e->getMessage()]);
+    if ($ride['status'] === 'delivered') {
+        $conn->rollBack();
+        echo json_encode(["success" => true, "message" => "Already finished"]);
         exit;
     }
-} else {
-    // Closed ride, price already set. Just mark delivered.
-    // NOTE: For closed rides, commission is ALREADY deducted in take_ride.php
-    $stmt = $conn->prepare("UPDATE rides SET status = 'delivered', end_time = CURRENT_TIMESTAMP WHERE id = ?");
-    $stmt->bind_param("i", $ride_id);
-    $stmt->execute();
-}
 
-if($stmt->execute()) {
-    echo json_encode(["success" => true]);
-} else {
-    echo json_encode(["success" => false, "error" => "Update failed: " . $conn->error]);
+    $sQuery = $conn->query("SELECT * FROM settings LIMIT 1");
+    $settings = $sQuery->fetch();
+    $commRate = (float)($settings['commission_percent'] ?? 10.0);
+    $driver_id = (int)$ride['driver_id'];
+
+    // 2. Determine Final Trip Price
+    if ($ride['type'] == 'open') {
+        // Calculate dynamic price for open rides: Base + Minutes
+        $duration_min = (int)$ride['duration_min'];
+        if($duration_min < 0) $duration_min = 0;
+
+        $final_price = (float)$settings['base_fare'] + ($duration_min * (float)$settings['price_min']);
+        $final_price = round($final_price, 2);
+
+        // Update ride with calculated price
+        $stmt = $conn->prepare("UPDATE rides SET status = 'delivered', dropoff_lat = :d_lat, dropoff_lng = :d_lng, total_price = :price, end_time = CURRENT_TIMESTAMP WHERE id = :ride_id");
+        $stmt->execute([
+            ':d_lat' => $d_lat,
+            ':d_lng' => $d_lng,
+            ':price' => $final_price,
+            ':ride_id' => $ride_id
+        ]);
+    } else {
+        // Fixed price ride
+        $final_price = (float)$ride['total_price'];
+        $stmt = $conn->prepare("UPDATE rides SET status = 'delivered', end_time = CURRENT_TIMESTAMP WHERE id = :ride_id");
+        $stmt->execute([':ride_id' => $ride_id]);
+    }
+
+    // 3. Automated Commission Deduction (only if not already done)
+    $commission = 0;
+    if ($driver_id > 0) {
+        // EXACT FORMULA: balance = balance - (ride_price * commission_percent / 100)
+        $commission = $final_price * ($commRate / 100);
+        $commission = round($commission, 2);
+        
+        $uBal = $conn->prepare("UPDATE users SET balance = COALESCE(balance, 0) - :commission WHERE id = :driver_id");
+        $uBal->execute([':commission' => $commission, ':driver_id' => $driver_id]);
+    }
+
+    $conn->commit();
+    echo json_encode(["success" => true, "final_price" => $final_price, "commission_deducted" => $commission ?? 0]);
+
+} catch (Exception $e) {
+    if ($conn->inTransaction()) $conn->rollBack();
+    echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>

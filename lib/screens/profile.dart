@@ -24,6 +24,7 @@ class ProfilePage extends StatelessWidget {
             const Text("To change password, please contact Admin."),
             const SizedBox(height: 40),
             ElevatedButton(
+              onPressed: () async {
                 // Logout logic
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.clear();

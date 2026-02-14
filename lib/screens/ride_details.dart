@@ -28,6 +28,7 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
   final Set<Polyline> _polylines = {};
   double commissionRate = 10.0;
   bool isSettingsLoaded = false;
+  double currentBalance = 0.0;
 
   @override
   void initState() {
@@ -50,11 +51,18 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
 
   void _fetchSettings() async {
     try {
+      // Fetch settings
       var res = await http.get(Uri.parse("${Config.baseUrl}/get_settings.php"), headers: Config.headers);
       var data = json.decode(res.body);
+      
+      // Fetch current balance for the driver
+      var balRes = await http.get(Uri.parse("${Config.baseUrl}/wallet.php?driver_id=${widget.driverId}"), headers: Config.headers);
+      var balData = json.decode(balRes.body);
+
       if(mounted) {
         setState(() {
           commissionRate = double.tryParse(data['commission_percent']?.toString() ?? "10") ?? 10.0;
+          currentBalance = double.tryParse(balData['balance']?.toString() ?? "0.0") ?? 0.0;
           isSettingsLoaded = true;
         });
       }
@@ -166,18 +174,31 @@ class _RideDetailsPageState extends State<RideDetailsPage> {
                         ),
                       ),
                     ),
+                    if (isSettingsLoaded && widget.rideData['type'] == 'open' && currentBalance < 50)
+                       Container(
+                         margin: const EdgeInsets.only(bottom: 10),
+                         padding: const EdgeInsets.all(10),
+                         decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.red)),
+                         child: Row(
+                           children: [
+                             const Icon(Icons.warning, color: Colors.red),
+                             const SizedBox(width: 10),
+                             Expanded(child: Text(Lang.get('min_balance_msg'), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                           ],
+                         ),
+                       ),
                     const SizedBox(height: 25),
                     SizedBox(
                       width: double.infinity,
                       height: 60,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2ECC71),
+                          backgroundColor: (widget.rideData['type'] == 'open' && currentBalance < 50) ? Colors.grey : const Color(0xFF2ECC71),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           elevation: 8,
                           shadowColor: Colors.green.withOpacity(0.4)
                         ),
-                        onPressed: isProcessing ? null : _startRide,
+                        onPressed: (isProcessing || (widget.rideData['type'] == 'open' && currentBalance < 50)) ? null : _startRide,
                         child: isProcessing 
                           ? const CircularProgressIndicator(color: Colors.white) 
                           : Text(Lang.get('accept_ride'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.2)),

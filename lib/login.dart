@@ -1,3 +1,4 @@
+// No changes needed if grep didn't find "Wasalni" here, but checking for completeness.
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -180,8 +181,10 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_taxi,
-                          size: 70, color: Color(0xFF0D47A1)),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset('assets/logo.jpeg', width: 120, height: 120, fit: BoxFit.cover),
+                      ),
                       const SizedBox(height: 10),
                       Text(Lang.get('login_title'),
                           style: const TextStyle(

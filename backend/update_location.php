@@ -14,12 +14,16 @@ if (!$driver_id) {
 }
 
 // Check if columns exist, if not we might fail. Assuming setup.sql was run.
-$stmt = $conn->prepare("UPDATE users SET last_lat = ?, last_lng = ?, is_online = ? WHERE id = ?");
-$stmt->bind_param("ddii", $lat, $lng, $is_online, $driver_id);
-
-if ($stmt->execute()) {
+try {
+    $stmt = $conn->prepare("UPDATE users SET last_lat = :lat, last_lng = :lng, is_online = :is_online WHERE id = :id");
+    $stmt->execute([
+        ':lat' => $lat,
+        ':lng' => $lng,
+        ':is_online' => $is_online,
+        ':id' => $driver_id
+    ]);
     echo json_encode(["success" => true]);
-} else {
-    echo json_encode(["success" => false, "error" => "Update failed: " . $conn->error]);
+} catch (PDOException $e) {
+    echo json_encode(["success" => false, "error" => "Update failed: " . $e->getMessage()]);
 }
 ?>

@@ -25,13 +25,22 @@ if(isset($_FILES['photo'])) {
     }
 }
 
-$stmt = $conn->prepare("INSERT INTO users (phone, password, name, car_number, photo_path, role, balance) VALUES (?, ?, ?, ?, ?, 'driver', 0.00)");
-$stmt->bind_param("sssss", $phone, $password, $name, $car_number, $photo_path);
+try {
+    $sql = "INSERT INTO users (phone, password, name, car_number, photo_path, role, balance) VALUES (:phone, :password, :name, :car_number, :photo_path, 'driver', 0.00)";
+    $stmt = $conn->prepare($sql);
+    
+    $stmt->execute([
+        ':phone' => $phone,
+        ':password' => $password,
+        ':name' => $name,
+        ':car_number' => $car_number,
+        ':photo_path' => $photo_path
+    ]);
 
-ob_end_clean();
-if ($stmt->execute()) {
+    ob_end_clean();
     echo json_encode(["success" => true]);
-} else {
-    echo json_encode(["success" => false, "error" => "Phone number already exists or DB error: " . $conn->error]);
+} catch (PDOException $e) {
+    ob_end_clean();
+    echo json_encode(["success" => false, "error" => "Phone number already exists or DB error: " . $e->getMessage()]);
 }
 ?>
