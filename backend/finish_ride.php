@@ -16,8 +16,8 @@ try {
     $conn->beginTransaction();
 
     // 1. Fetch Ride and Settings with locking to prevent race conditions
-    // Use TIMESTAMPDIFF to let the DB handle the duration calculation (avoids TZ issues)
-    $q = $conn->prepare("SELECT *, TIMESTAMPDIFF(MINUTE, start_time, CURRENT_TIMESTAMP) as duration_min FROM rides WHERE id = :ride_id FOR UPDATE");
+    // Use PostgreSQL specific extraction to get minutes (DB logic)
+    $q = $conn->prepare("SELECT *, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) - EXTRACT(EPOCH FROM start_time))/60 as duration_min FROM rides WHERE id = :ride_id FOR UPDATE");
     $q->execute([':ride_id' => $ride_id]);
     $ride = $q->fetch();
 

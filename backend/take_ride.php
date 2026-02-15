@@ -57,14 +57,24 @@ if ($type == 'open') {
     }
 }
 
-// 4. Update Ride Status ONLY (Commission is deducted in finish_ride.php)
+// 4. Update Ride Status
 $conn->beginTransaction();
 try {
-    // Update Ride
+    // 4.1 Update Ride
     $stmt = $conn->prepare("UPDATE rides SET status = 'accepted', driver_id = :driver_id, start_time = CURRENT_TIMESTAMP WHERE id = :ride_id AND status = 'pending'");
     $stmt->execute([':driver_id' => $driver_id, ':ride_id' => $ride_id]);
     
     if ($stmt->rowCount() == 0) throw new Exception("Ride already accepted or no longer available.");
+
+    // 4.2 Fetch Driver Phone for Admin Notification
+    $dInfo = $conn->prepare("SELECT phone FROM users WHERE id = :driver_id");
+    $dInfo->execute([':driver_id' => $driver_id]);
+    $driver = $dInfo->fetch();
+    $dPhone = $driver['phone'] ?? 'Unknown';
+
+    include_once 'send_notification_func.php';
+    // Notify Admins with the Captain's Phone Number
+    send_notification($conn, 'admin', null, 'تم استلام رحلة', "الكابتن ($dPhone) استلم الرحلة رقم #$ride_id");
 
     $conn->commit();
     echo json_encode(["success" => true]);

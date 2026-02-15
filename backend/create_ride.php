@@ -11,9 +11,9 @@ $d_lng = $_POST['d_lng'] ?? 0;
 $price = $_POST['price'] ?? 0;
 $customer_phone = $_POST['customer_phone'] ?? '';
 
-$type = $_POST['type'] ?? 'closed'; // 'open' or 'closed'
+$type = $_POST['type'] ?? 'fixed'; // 'open' or 'fixed'
 
-if ($type == 'closed') {
+if ($type == 'fixed') {
     if (!$pickup || !$dropoff || !$price) {
         echo json_encode(["success" => false, "error" => "Missing info for closed ride"]);
         exit;
