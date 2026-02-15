@@ -370,33 +370,28 @@ class _OnRidePageState extends State<OnRidePage> {
                         ),
                       const Divider(),
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 50,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                onPressed: isLoading ? null : _cancelRide,
-                                child: Text(Lang.get('cancel'), style: const TextStyle(fontSize: 16, color: Colors.white)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: SizedBox(
-                              height: 50,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                onPressed: isLoading ? null : _finishRide,
-                                child: isLoading 
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : Text(Lang.get('finish_ride'), style: const TextStyle(fontSize: 16, color: Colors.white)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
+                      // Action Buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _finishRide,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D47A1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 5,
+                ),
+                child: isLoading 
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                      Lang.get('finish_ride', context),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+              ),
+            ),
+          ),
                    ],
                 ),
               ),

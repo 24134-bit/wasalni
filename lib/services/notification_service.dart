@@ -46,8 +46,8 @@ class NotificationService {
               // Vibrate
               HapticFeedback.heavyImpact();
               
-              ScaffoldMessenger.of(context).showMaterialBanner(
-                MaterialBanner(
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,12 +57,9 @@ class NotificationService {
                     ],
                   ),
                   backgroundColor: const Color(0xFF0D47A1),
-                  actions: [
-                    TextButton(
-                      child: const Text('OK', style: TextStyle(color: Colors.white)),
-                      onPressed: () => ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-                    ),
-                  ],
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               );
             }

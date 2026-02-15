@@ -12,13 +12,18 @@ if(!$ride_id) {
 
 $conn->beginTransaction();
 try {
-    // 1. Get Ride Details (Price and Driver)
-    $stmt = $conn->prepare("SELECT total_price, driver_id, status FROM rides WHERE id = :id");
+    // 2. Get Ride Details
+    $stmt = $conn->prepare("SELECT driver_id, status FROM rides WHERE id = :id");
     $stmt->execute([':id' => $ride_id]);
     $ride = $stmt->fetch();
 
     if (!$ride) throw new Exception("Ride not found");
     
+    // Security Restriction: Drivers are no longer allowed to cancel rides.
+    // This endpoint is now restricted as requested.
+    throw new Exception("Cancellation is now restricted to administrators only. Please contact support.");
+
+    $assigned_driver = $ride['driver_id'];
     // Allowed statuses for Captain to "Release" a ride (reset to pending)
     $allowed = ['pending', 'accepted', 'arrived', 'on_trip'];
     if (!in_array($ride['status'], $allowed)) {
