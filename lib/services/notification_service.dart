@@ -43,8 +43,6 @@ class NotificationService {
             
             // Show Notification (Non-intrusive SnackBar instead of Banner)
             if (context.mounted) {
-              import 'package:flutter/services.dart'; // Ensure it's inside or at the top
-              
               // Vibrate
               HapticFeedback.heavyImpact();
               

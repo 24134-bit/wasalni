@@ -249,6 +249,43 @@ class _OnRidePageState extends State<OnRidePage> {
     }
   }
 
+  void _cancelRide() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Lang.get('cancel')),
+        content: const Text("هل أنت متأكد من إلغاء هذه الرحلة؟"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("لا")),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("نعم", style: TextStyle(color: Colors.red))),
+        ],
+      )
+    );
+
+    if (confirm != true) return;
+
+    setState(() => isLoading = true);
+    try {
+      final res = await http.post(
+        Uri.parse("${Config.baseUrl}/cancel_ride.php"),
+        headers: Config.headers,
+        body: {"ride_id": widget.rideData['id'].toString()}
+      );
+      final data = json.decode(res.body);
+      if (mounted) {
+        if (data['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إلغاء الرحلة")));
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['error'])));
+          setState(() => isLoading = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
