@@ -27,9 +27,14 @@ try {
 
     $assigned_driver = $ride['driver_id'];
 
-    // 3. Mark Ride as cancelled permanently
-    $updateRide = $conn->prepare("UPDATE rides SET status = 'cancelled' WHERE id = :id");
-    $updateRide->execute([':id' => $ride_id]);
+    // Validation: Only the assigned driver (or admin) can cancel/delete
+    if ($driver_id && $assigned_driver && $driver_id != $assigned_driver) {
+        throw new Exception("You are not authorized to cancel this ride.");
+    }
+
+    // 3. Mark Ride as cancelled permanently (DELETE as per user request)
+    $deleteRide = $conn->prepare("DELETE FROM rides WHERE id = :id");
+    $deleteRide->execute([':id' => $ride_id]);
 
     // 4. Notify Admins
     include_once 'send_notification_func.php';
@@ -47,10 +52,10 @@ try {
         }
     }
 
-    send_notification($conn, 'admin', null, 'إلغاء استلام رحلة', "الكابتن ($dName - $dPhone) قام بإلغاء استلام الرحلة رقم #$ride_id وباتت متاحة مجدداً.");
+    send_notification($conn, 'admin', null, 'حذف رحلة', "الكابتن ($dName - $dPhone) قام بحذف الرحلة رقم #$ride_id تماماً.");
 
     $conn->commit();
-    echo json_encode(["success" => true]);
+    echo json_encode(["success" => true, "message" => "Ride deleted successfully"]);
 
 } catch (Exception $e) {
     $conn->rollBack();

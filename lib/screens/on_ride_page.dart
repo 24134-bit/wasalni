@@ -273,19 +273,30 @@ class _OnRidePageState extends State<OnRidePage> {
           "ride_id": widget.rideData['id'].toString(),
           "driver_id": widget.driverId.toString()
         }
-      );
+      ).timeout(const Duration(seconds: 15));
+
       final data = json.decode(res.body);
       if (mounted) {
         if (data['success']) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم إلغاء الرحلة")));
-          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم حذف الرحلة بنجاح")));
+          
+          // Clear timers before popping
+          _priceTimer?.cancel();
+          _statusCheckTimer?.cancel();
+          _positionStream?.cancel();
+          
+          Navigator.pop(context); // Go back to Home
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['error'])));
+          String errorMsg = data['error'] ?? "فشل الحذف";
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
           setState(() => isLoading = false);
         }
       }
     } catch (e) {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("خطأ في الاتصال: $e"), backgroundColor: Colors.red));
+        setState(() => isLoading = false);
+      }
     }
   }
 
