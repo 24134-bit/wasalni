@@ -22,8 +22,9 @@ class _OnRidePageState extends State<OnRidePage> {
   final Completer<GoogleMapController> _controller = Completer();
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  Timer? _priceTimer;
   Timer? _statusCheckTimer;
+  StreamSubscription<Position>? _positionStream;
+  LatLng? _currentPosition;
   double _currentPrice = 0.0;
   double _pricePerMin = 0.0;
   bool isOpenRide = false;
@@ -54,6 +55,46 @@ class _OnRidePageState extends State<OnRidePage> {
     
     // Check if ride is still active (not cancelled by admin)
     _startStatusCheck();
+
+    // Start live tracking
+    _startLiveTracking();
+  }
+
+  void _startLiveTracking() {
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10)
+    ).listen((Position position) {
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+          _updatePolylines();
+        });
+      }
+    });
+  }
+
+  void _updatePolylines() {
+    Set<Polyline> newPolylines = {};
+    List<LatLng> points = [];
+
+    if (_currentPosition != null) {
+      points.add(_currentPosition!);
+    }
+    points.add(pickup);
+    points.add(dropoff);
+
+    newPolylines.add(
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: points,
+        color: Colors.blue,
+        width: 5,
+      )
+    );
+
+    setState(() {
+      _polylines = newPolylines;
+    });
   }
 
   void _startStatusCheck() {
@@ -123,6 +164,7 @@ class _OnRidePageState extends State<OnRidePage> {
   void dispose() {
     _priceTimer?.cancel();
     _statusCheckTimer?.cancel();
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -231,6 +273,8 @@ class _OnRidePageState extends State<OnRidePage> {
             initialCameraPosition: CameraPosition(target: pickup, zoom: 13),
             markers: _markers,
             polylines: _polylines,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
             onMapCreated: (controller) => _controller.complete(controller),
           ),
           Positioned(
@@ -272,19 +316,35 @@ class _OnRidePageState extends State<OnRidePage> {
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Text("(+ $_pricePerMin ${Lang.get('sar')} / min)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         ),
-                     const Divider(),
-                     const SizedBox(height: 10),
-                     SizedBox(
-                       width: double.infinity,
-                       height: 50,
-                       child: ElevatedButton(
-                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                         onPressed: isLoading ? null : _finishRide,
-                         child: isLoading 
-                           ? const CircularProgressIndicator(color: Colors.white)
-                           : Text(Lang.get('finish_ride'), style: const TextStyle(fontSize: 18, color: Colors.white)),
-                       ),
-                     )
+                      const Divider(),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: isLoading ? null : _cancelRide,
+                                child: Text(Lang.get('cancel'), style: const TextStyle(fontSize: 16, color: Colors.white)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                onPressed: isLoading ? null : _finishRide,
+                                child: isLoading 
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : Text(Lang.get('finish_ride'), style: const TextStyle(fontSize: 16, color: Colors.white)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
                    ],
                 ),
               ),
