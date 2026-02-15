@@ -27,18 +27,25 @@ try {
 
     $assigned_driver = $ride['driver_id'];
 
-    // 3. Mark Ride as Pending again (Release)
-    $updateRide = $conn->prepare("UPDATE rides SET status = 'pending', driver_id = NULL WHERE id = :id");
+    // 3. Mark Ride as cancelled permanently
+    $updateRide = $conn->prepare("UPDATE rides SET status = 'cancelled' WHERE id = :id");
     $updateRide->execute([':id' => $ride_id]);
 
     // 4. Notify Admins
     include_once 'send_notification_func.php';
-    // Fetch current captain info for the notification
-    $dInfo = $conn->prepare("SELECT name, phone FROM users WHERE id = :driver_id");
-    $dInfo->execute([':driver_id' => $driver_id]);
-    $driver = $dInfo->fetch();
-    $dName = $driver['name'] ?? 'Unknown';
-    $dPhone = $driver['phone'] ?? 'Unknown';
+    
+    $dName = 'Unknown';
+    $dPhone = 'Unknown';
+    
+    if ($driver_id) {
+        $dInfo = $conn->prepare("SELECT name, phone FROM users WHERE id = :driver_id");
+        $dInfo->execute([':driver_id' => $driver_id]);
+        $driver = $dInfo->fetch();
+        if ($driver) {
+            $dName = $driver['name'];
+            $dPhone = $driver['phone'];
+        }
+    }
 
     send_notification($conn, 'admin', null, 'إلغاء استلام رحلة', "الكابتن ($dName - $dPhone) قام بإلغاء استلام الرحلة رقم #$ride_id وباتت متاحة مجدداً.");
 

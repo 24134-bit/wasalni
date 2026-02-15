@@ -269,7 +269,10 @@ class _OnRidePageState extends State<OnRidePage> {
       final res = await http.post(
         Uri.parse("${Config.baseUrl}/cancel_ride.php"),
         headers: Config.headers,
-        body: {"ride_id": widget.rideData['id'].toString()}
+        body: {
+          "ride_id": widget.rideData['id'].toString(),
+          "driver_id": widget.driverId.toString()
+        }
       );
       final data = json.decode(res.body);
       if (mounted) {
