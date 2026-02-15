@@ -1,10 +1,10 @@
 FROM php:8.1-apache
 
-# Install system dependencies and PHP extensions in a single robust layer
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install dependencies for PostgreSQL and PHP extensions
+RUN apt-get update && apt-get install -y \
     libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql mysqli \
-    && docker-php-ext-enable pdo pdo_pgsql mysqli \
+    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-install pdo pdo_pgsql mysqli pgsql \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache modules
