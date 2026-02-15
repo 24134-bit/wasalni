@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart';
 import '../config.dart';
 
 class NotificationService {
@@ -40,31 +41,34 @@ class NotificationService {
             int currentId = int.tryParse(item['id'].toString()) ?? 0;
             if (currentId > maxId) maxId = currentId;
             
-            // Show Notification
+            // Show Notification (Non-intrusive SnackBar instead of Banner)
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showMaterialBanner(
-                MaterialBanner(
+              import 'package:flutter/services.dart'; // Ensure it's inside or at the top
+              
+              // Vibrate
+              HapticFeedback.heavyImpact();
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
                   content: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(item['body']),
                     ],
                   ),
-                  backgroundColor: Colors.blueAccent.shade100,
-                  leading: const Icon(Icons.notifications_active, color: Colors.blue),
-                  actions: [
-                    TextButton(
-                      onPressed: () => ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-                      child: const Text('DISMISS', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
+                  duration: const Duration(seconds: 4),
+                  backgroundColor: const Color(0xFF0D47A1),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
                 ),
               );
-              // Auto hide after 5 seconds
-              Future.delayed(const Duration(seconds: 5), () {
-                if(context.mounted) ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              });
             }
           }
           _lastId = maxId;

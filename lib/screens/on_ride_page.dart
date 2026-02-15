@@ -23,6 +23,7 @@ class _OnRidePageState extends State<OnRidePage> {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   Timer? _priceTimer;
+  Timer? _statusCheckTimer;
   double _currentPrice = 0.0;
   double _pricePerMin = 0.0;
   bool isOpenRide = false;
@@ -50,6 +51,49 @@ class _OnRidePageState extends State<OnRidePage> {
     if (isOpenRide) {
       _fetchSettingsAndStartTimer();
     }
+    
+    // Check if ride is still active (not cancelled by admin)
+    _startStatusCheck();
+  }
+
+  void _startStatusCheck() {
+    _statusCheckTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+       try {
+         final res = await http.get(
+           Uri.parse("${Config.baseUrl}/available_rides.php?action=active_ride&driver_id=${widget.driverId}"), 
+           headers: Config.headers
+         );
+         final data = json.decode(res.body);
+         
+         if (mounted) {
+           if (!data['success'] || data['ride'] == null || data['ride']['id'].toString() != widget.rideData['id'].toString()) {
+             // Ride is gone!
+             _statusCheckTimer?.cancel();
+             _showCancelledDialog();
+           }
+         }
+       } catch (e) {}
+    });
+  }
+
+  void _showCancelledDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("تنبيه", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: const Text("عذراً، هذه الرحلة تم إلغاؤها من قبل المسؤول."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pop(); // Exit ride page
+            }, 
+            child: const Text("حسناً")
+          )
+        ],
+      )
+    );
   }
 
   void _fetchSettingsAndStartTimer() async {
@@ -78,6 +122,7 @@ class _OnRidePageState extends State<OnRidePage> {
   @override
   void dispose() {
     _priceTimer?.cancel();
+    _statusCheckTimer?.cancel();
     super.dispose();
   }
 
