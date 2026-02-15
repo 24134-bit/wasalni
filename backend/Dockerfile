@@ -1,9 +1,13 @@
-FROM php:8.1-apache
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install necessary system libraries for PostgreSQL
-RUN apt-get update && apt-get install -y libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql mysqli \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install PHP extensions individually to avoid hidden failures
+RUN docker-php-ext-install pdo
+RUN docker-php-ext-install pdo_pgsql
+RUN docker-php-ext-install mysqli
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
