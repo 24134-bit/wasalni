@@ -18,19 +18,28 @@ try {
     $ride = $stmt->fetch();
 
     if (!$ride) throw new Exception("Ride not found");
-    if ($ride['status'] != 'accepted' && $ride['status'] != 'arrived' && $ride['status'] != 'pending') {
-        throw new Exception("Cannot cancel logic for this status: " . $ride['status']);
+    
+    // Allowed statuses for Captain to "Release" a ride (reset to pending)
+    $allowed = ['pending', 'accepted', 'arrived', 'on_trip'];
+    if (!in_array($ride['status'], $allowed)) {
+        throw new Exception("Cannot cancel/release from this status: " . $ride['status']);
     }
 
-    $price = $ride['total_price'];
     $assigned_driver = $ride['driver_id'];
-    $status = $ride['status'];
 
-    // 2. Commission is NOT deducted until ride is finished, so no refund needed.
-    
-    // 3. Mark Ride as Pending again
+    // 3. Mark Ride as Pending again (Release)
     $updateRide = $conn->prepare("UPDATE rides SET status = 'pending', driver_id = NULL WHERE id = :id");
     $updateRide->execute([':id' => $ride_id]);
+
+    // 4. Notify Admins
+    include_once 'send_notification_func.php';
+    // Fetch current captain phone for the notification
+    $dInfo = $conn->prepare("SELECT phone FROM users WHERE id = :driver_id");
+    $dInfo->execute([':driver_id' => $driver_id]);
+    $driver = $dInfo->fetch();
+    $dPhone = $driver['phone'] ?? 'Unknown';
+
+    send_notification($conn, 'admin', null, 'إلغاء استلام رحلة', "الكابتن ($dPhone) قام بإلغاء استلام الرحلة رقم #$ride_id وباتت متاحة مجدداً.");
 
     $conn->commit();
     echo json_encode(["success" => true]);
