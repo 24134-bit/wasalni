@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
@@ -36,8 +37,8 @@ jobs:
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v1.0.0"
-          name: "Latest Wasalni APK"
+          tag_name: "v1.1.9" # Updated to match Conversation 1 objective or use dynamic tag
+          name: "Latest Wasalni APK v1.1.9"
           body: "هذا هو ملف APK الأخير الذي يحتوي على كافة التعديلات الجديدة."
           files: build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: false
