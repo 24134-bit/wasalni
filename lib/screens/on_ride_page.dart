@@ -23,6 +23,7 @@ class _OnRidePageState extends State<OnRidePage> {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   Timer? _statusCheckTimer;
+  Timer? _priceTimer;
   StreamSubscription<Position>? _positionStream;
   LatLng? _currentPosition;
   double _currentPrice = 0.0;
