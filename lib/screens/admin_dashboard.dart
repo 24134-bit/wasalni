@@ -656,7 +656,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                               subtitle: Text("${Lang.get('customer_phone_label')}: ${r['customer_phone'] ?? 'N/A'}\n${Lang.get('status')}: ${Lang.get('status_' + r['status'])} | ${r['total_price']} ${Lang.get('sar')}"),
                               trailing: IconButton(
                                 icon: const Icon(Icons.cancel, color: Colors.red),
-                                onPressed: () => _adminCancelRide(int.parse(r['id'])),
+                                onPressed: () => _adminCancelRide(int.parse(r['id'].toString())),
                               ),
                             ),
                           );
