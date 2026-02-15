@@ -1,9 +1,8 @@
-FROM php:8.1-apache-bullseye
+FROM php:8.1-apache
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql pgsql
+# Install PostgreSQL dev libraries and the driver in one layer
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo_pgsql pgsql
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
