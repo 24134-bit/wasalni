@@ -11,7 +11,8 @@ $d_lng = $_POST['d_lng'] ?? 0;
 $price = $_POST['price'] ?? 0;
 $customer_phone = $_POST['customer_phone'] ?? '';
 
-$type = $_POST['type'] ?? 'fixed'; // 'open' or 'fixed'
+$type = $_POST['type'] ?? 'fixed'; // 'open', 'fixed' or legacy 'closed'
+if ($type === 'closed') $type = 'fixed';
 
 if ($type == 'fixed') {
     if (!$pickup || !$dropoff || !$price) {

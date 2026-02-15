@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS rides (
     total_price DECIMAL(10, 2) DEFAULT 0.00,
     customer_phone VARCHAR(20),
     status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'arrived', 'on_trip', 'delivered', 'cancelled')) DEFAULT 'pending',
-    type VARCHAR(20) CHECK (type IN ('open', 'fixed')) DEFAULT 'fixed',
+    type VARCHAR(20) CHECK (type IN ('open', 'fixed', 'closed')) DEFAULT 'fixed',
     driver_id INT DEFAULT NULL,
     start_time TIMESTAMP NULL DEFAULT NULL,
     end_time TIMESTAMP NULL DEFAULT NULL,
