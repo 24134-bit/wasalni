@@ -66,15 +66,16 @@ try {
     
     if ($stmt->rowCount() == 0) throw new Exception("Ride already accepted or no longer available.");
 
-    // 4.2 Fetch Driver Phone for Admin Notification
-    $dInfo = $conn->prepare("SELECT phone FROM users WHERE id = :driver_id");
+    // 4.2 Fetch Driver Details for Admin Notification
+    $dInfo = $conn->prepare("SELECT name, phone FROM users WHERE id = :driver_id");
     $dInfo->execute([':driver_id' => $driver_id]);
     $driver = $dInfo->fetch();
+    $dName = $driver['name'] ?? 'Unknown';
     $dPhone = $driver['phone'] ?? 'Unknown';
 
     include_once 'send_notification_func.php';
-    // Notify Admins with the Captain's Phone Number
-    send_notification($conn, 'admin', null, 'تم استلام رحلة', "الكابتن ($dPhone) استلم الرحلة رقم #$ride_id");
+    // Notify Admins with the Captain's Name and Phone Number
+    send_notification($conn, 'admin', null, 'تم استلام رحلة', "الكابتن ($dName - $dPhone) استلم الرحلة رقم #$ride_id");
 
     $conn->commit();
     echo json_encode(["success" => true]);

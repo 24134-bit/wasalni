@@ -33,13 +33,14 @@ try {
 
     // 4. Notify Admins
     include_once 'send_notification_func.php';
-    // Fetch current captain phone for the notification
-    $dInfo = $conn->prepare("SELECT phone FROM users WHERE id = :driver_id");
+    // Fetch current captain info for the notification
+    $dInfo = $conn->prepare("SELECT name, phone FROM users WHERE id = :driver_id");
     $dInfo->execute([':driver_id' => $driver_id]);
     $driver = $dInfo->fetch();
+    $dName = $driver['name'] ?? 'Unknown';
     $dPhone = $driver['phone'] ?? 'Unknown';
 
-    send_notification($conn, 'admin', null, 'إلغاء استلام رحلة', "الكابتن ($dPhone) قام بإلغاء استلام الرحلة رقم #$ride_id وباتت متاحة مجدداً.");
+    send_notification($conn, 'admin', null, 'إلغاء استلام رحلة', "الكابتن ($dName - $dPhone) قام بإلغاء استلام الرحلة رقم #$ride_id وباتت متاحة مجدداً.");
 
     $conn->commit();
     echo json_encode(["success" => true]);
